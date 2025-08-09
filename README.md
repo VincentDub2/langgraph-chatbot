@@ -17,7 +17,10 @@
 Type  to exit.
 
 ## Files
-- : CLI chat loop using the compiled LangGraph.
-- : Defines the LangGraph state and model node.
-- : Template for environment variables.
-- : Python dependencies.
+- `app.py`: CLI chat loop using the compiled LangGraph.
+- `graph.py`: Defines the LangGraph state and model node.
+- `prompt_manager.py`: Load versioned Markdown prompts from the `prompts/` directory.
+- `pyproject.toml`: Python dependencies.
+- `uv.lock`: Lockfile for dependencies.
+- `tools/`: Additional tool functions used by the graph.
+- `prompts/`: Example prompt files (e.g. `chatbot_v1.md`).

@@ -2,7 +2,9 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+from prompt_manager import PromptManager
 
 from graph import graph
 
@@ -23,7 +25,10 @@ def main() -> None:
     ensure_api_key()
 
     print("LangGraph Chatbot (type '/quit' to exit, '/new' for new thread, '/thread <id>' to switch)")
-    state = {"messages": []}
+    pm = PromptManager()
+    system_prompt = pm.load("chatbot")
+    state: dict = {"messages": []}
+    initial_messages = [SystemMessage(content=system_prompt)]
     thread_id = "default"
 
     while True:
@@ -41,19 +46,22 @@ def main() -> None:
             import uuid
             thread_id = uuid.uuid4().hex[:8]
             state = {"messages": []}
+            initial_messages = [SystemMessage(content=system_prompt)]
             print(f"New thread: {thread_id}")
             continue
         if user_input.startswith("/thread "):
             thread_id = user_input.split(" ", 1)[1].strip() or thread_id
             state = {"messages": []}
+            initial_messages = [SystemMessage(content=system_prompt)]
             print(f"Switched to thread: {thread_id}")
             continue
 
         # Persisted conversation via thread_id in config
         state = graph.invoke(
-            {**state, "messages": [HumanMessage(content=user_input)]},
+            {"messages": initial_messages + [HumanMessage(content=user_input)]},
             config={"configurable": {"thread_id": thread_id}},
         )
+        initial_messages = []
 
         ai_messages = [m for m in state["messages"] if isinstance(m, AIMessage)]
         if ai_messages:
