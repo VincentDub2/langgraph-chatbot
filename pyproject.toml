@@ -9,8 +9,9 @@ dependencies = [
   "langchain",
   "langchain-openai",
   "python-dotenv",
+  "fastapi[standard]",
   "requests",
-  "langchain-mistralai>=0.2.11",
+  "gradio>=4.0.0"
 ]
 
 [project.scripts]
