@@ -1,16 +1,8 @@
+"""
+Outils LangGraph pour le chatbot immobilier
+"""
 import json
-import os
-from re import M
-import os
-from typing import Annotated, Dict, List, TypedDict
-
-from langgraph.graph import END, START, StateGraph
-from langgraph.graph.message import AnyMessage, add_messages
-from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool as lc_tool
-from langchain_core.messages import SystemMessage
 
 from tools import (
     calculate_expression, 
@@ -33,17 +25,11 @@ from tools import (
     get_property_summary as get_property_summary_tool,
     suggest_properties_for_client as suggest_properties_for_client_tool
 )
-from prompt_manager import load_system_prompt, get_default_system_prompt
 
 
-class ChatState(TypedDict):
-    messages: Annotated[List[AnyMessage], add_messages]
-
-
-# Wrap plain functions as LangChain Tools so the model can call them
 @lc_tool
 def calc(expression: str) -> str:
-    """Evaluate a math expression. Use for arithmetic like 2*(3+4)."""
+    """Évalue une expression mathématique. Utilisez pour l'arithmétique comme 2*(3+4)."""
     return calculate_expression(expression)
 
 
@@ -55,6 +41,7 @@ def check_availability(agent_id: str, window: str) -> str:
     """
     data = check_availability_tool(agent_id, window)
     return json.dumps(data, ensure_ascii=False)
+
 
 @lc_tool
 def create_event(agent_id: str, start: str, end: str, title: str, attendees: str = None, location: str = None, description: str = None) -> str:
@@ -74,7 +61,6 @@ def create_event(agent_id: str, start: str, end: str, title: str, attendees: str
         JSON string avec les détails de l'événement créé
     """
     try:
-        # Parse attendees if provided
         attendees_list = None
         if attendees:
             attendees_list = json.loads(attendees)
@@ -92,6 +78,7 @@ def create_event(agent_id: str, start: str, end: str, title: str, attendees: str
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def get_agent_info(agent_id: str) -> str:
     """
@@ -106,6 +93,7 @@ def get_agent_info(agent_id: str) -> str:
     data = get_agent_info_tool(agent_id)
     return json.dumps(data, ensure_ascii=False)
 
+
 @lc_tool
 def list_agents() -> str:
     """
@@ -116,6 +104,7 @@ def list_agents() -> str:
     """
     data = list_agents_tool()
     return json.dumps(data, ensure_ascii=False)
+
 
 @lc_tool
 def find_agent_by_speciality(speciality: str) -> str:
@@ -131,6 +120,7 @@ def find_agent_by_speciality(speciality: str) -> str:
     data = find_agent_by_speciality_tool(speciality)
     return json.dumps(data, ensure_ascii=False)
 
+
 @lc_tool
 def get_agent_availability_summary(agent_id: str) -> str:
     """
@@ -144,6 +134,7 @@ def get_agent_availability_summary(agent_id: str) -> str:
     """
     data = get_agent_availability_summary_tool(agent_id)
     return json.dumps(data, ensure_ascii=False)
+
 
 @lc_tool
 def validate_client_data(client_data: str) -> str:
@@ -166,6 +157,7 @@ def validate_client_data(client_data: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def suggest_agent_by_preferences(client_data: str) -> str:
     """
@@ -186,6 +178,7 @@ def suggest_agent_by_preferences(client_data: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def get_property_info(property_id: str) -> str:
     """
@@ -199,6 +192,7 @@ def get_property_info(property_id: str) -> str:
     """
     data = get_property_info_tool(property_id)
     return json.dumps(data, ensure_ascii=False)
+
 
 @lc_tool
 def list_properties(property_type: str = None, max_price: str = None, location: str = None) -> str:
@@ -220,6 +214,7 @@ def list_properties(property_type: str = None, max_price: str = None, location: 
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def search_properties_by_criteria(criteria: str) -> str:
     """
@@ -238,6 +233,7 @@ def search_properties_by_criteria(criteria: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def get_properties_by_agent(agent_id: str) -> str:
     """
@@ -252,6 +248,7 @@ def get_properties_by_agent(agent_id: str) -> str:
     data = get_properties_by_agent_tool(agent_id)
     return json.dumps(data, ensure_ascii=False)
 
+
 @lc_tool
 def get_property_summary(property_id: str) -> str:
     """
@@ -265,6 +262,7 @@ def get_property_summary(property_id: str) -> str:
     """
     summary = get_property_summary_tool(property_id)
     return summary
+
 
 @lc_tool
 def suggest_properties_for_client(client_preferences: str) -> str:
@@ -284,12 +282,14 @@ def suggest_properties_for_client(client_preferences: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
+
 @lc_tool
 def now() -> str:
-    """Get the current UTC time in ISO 8601 format."""
+    """Obtient l'heure UTC actuelle au format ISO 8601."""
     return get_current_time()
 
 
+# Liste de tous les outils disponibles
 TOOLS = [
     calc, 
     check_availability, 
@@ -308,59 +308,3 @@ TOOLS = [
     suggest_properties_for_client,
     now
 ]
-tool_node = ToolNode(TOOLS)
-
-
-def call_model(state: ChatState) -> dict:
-    # Bind tools so the model can decide to call them via function/tool calls
-
-    model = ChatOpenAI(
-        model="gpt-oss-120b",
-        temperature=0.2,
-        api_key=os.getenv("API_KEY"),
-        base_url=os.getenv("BASE_URL"),
-    ).bind_tools(TOOLS)
-
-    # Charger le prompt système
-    system_prompt = load_system_prompt("v1")
-    if not system_prompt:
-        system_prompt = get_default_system_prompt()
-    
-    # Ajouter le message système au début si pas déjà présent
-    messages = state["messages"]
-    if not messages or not isinstance(messages[0], SystemMessage):
-        messages = [SystemMessage(content=system_prompt)] + messages
-    
-    response = model.invoke(messages)
-    print(response)
-    return {"messages": [response]}
-
-
-def route_tools(state: ChatState):
-    last = state["messages"][-1]
-    # If the model requested any tool calls, go to the tools node; otherwise end
-    if getattr(last, "tool_calls", None):
-        return "tools"
-    return END
-
-
-def create_graph():
-    builder = StateGraph(ChatState)
-    builder.add_node("model", call_model)
-    builder.add_node("tools", tool_node)
-    builder.add_edge(START, "model")
-    builder.add_conditional_edges(
-        "model",
-        route_tools,
-        {"tools": "tools", END: END},
-    )
-    # After tools run, go back to the model to incorporate tool results
-    builder.add_edge("tools", "model")
-    # Persistent across invocations via thread_id within process lifetime
-    checkpointer = MemorySaver()
-    return builder.compile(checkpointer=checkpointer)
-
-
-graph = create_graph()
-
-
