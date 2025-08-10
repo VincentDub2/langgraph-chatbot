@@ -34,6 +34,15 @@ class Settings(BaseModel):
     prompts_dir: str = "prompts"
     logs_dir: str = "logs"
     ics_dir: str = "ics_out"
+    
+    # Configuration Email
+    mail_username: Optional[str] = None
+    mail_password: Optional[str] = None
+    mail_from: Optional[str] = None
+    mail_server: str = "smtp.gmail.com"
+    mail_port: int = 587
+    mail_starttls: bool = True
+    mail_ssl_tls: bool = False
 
 
 def get_settings() -> Settings:
@@ -53,5 +62,12 @@ def get_settings() -> Settings:
         cors_origins=os.getenv("CORS_ORIGINS", "*").split(","),
         prompts_dir=os.getenv("PROMPTS_DIR", "prompts"),
         logs_dir=os.getenv("LOGS_DIR", "logs"),
-        ics_dir=os.getenv("ICS_DIR", "ics_out")
+        ics_dir=os.getenv("ICS_DIR", "ics_out"),
+        mail_username=os.getenv("MAIL_USERNAME"),
+        mail_password=os.getenv("MAIL_PASSWORD"),
+        mail_from=os.getenv("MAIL_FROM"),
+        mail_server=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
+        mail_port=int(os.getenv("MAIL_PORT", "587")),
+        mail_starttls=os.getenv("MAIL_STARTTLS", "true").lower() == "true",
+        mail_ssl_tls=os.getenv("MAIL_SSL_TLS", "false").lower() == "true"
     )

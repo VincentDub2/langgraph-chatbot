@@ -8,6 +8,7 @@ Un chatbot intelligent pour la gestion des rendez-vous immobiliers, développé 
 - ✅ Vérification des disponibilités des agents
 - ✅ Réservation de créneaux de visite
 - ✅ Génération de fichiers ICS pour les confirmations
+- ✅ **Envoi automatique d'emails de confirmation aux clients**
 - ✅ Gestion des conflits de planning
 
 ### Gestion des Agents
@@ -80,6 +81,11 @@ cd langgraph-chatbot
 # Configurer les variables d'environnement
 export API_KEY="votre_clé_api"
 export BASE_URL="votre_url_base"
+
+# Configuration email (optionnel, pour les confirmations automatiques)
+export MAIL_USERNAME="votre_email@gmail.com"
+export MAIL_PASSWORD="votre_mot_de_passe_application"
+export MAIL_FROM="votre_email@gmail.com"
 
 # Démarrer avec Docker
 ./start.sh dev
@@ -292,8 +298,44 @@ curl -X POST "http://localhost:8000/availability" \
 3. **Validation** - Vérification des données client
 4. **Recherche** - Suggestion d'agents et de propriétés
 5. **Vérification disponibilités** - Consultation des créneaux
-6. **Création rendez-vous** - Réservation du créneau
-7. **Confirmation** - Récapitulatif et informations
+6. **Confirmation** - Création du rendez-vous et envoi d'email de confirmation
+
+## 📧 Configuration Email
+
+Le chatbot peut envoyer automatiquement des emails de confirmation de rendez-vous aux clients.
+
+### Configuration requise
+
+Ajoutez ces variables à votre fichier `.env` :
+
+```bash
+# Configuration Email
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
+MAIL_FROM=your_email@gmail.com
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_STARTTLS=true
+MAIL_SSL_TLS=false
+```
+
+### Fournisseurs supportés
+
+- **Gmail** : Utilisez un mot de passe d'application
+- **Outlook/Hotmail** : Configuration standard
+- **Serveurs SMTP personnalisés** : Configuration flexible
+
+### Test de la configuration
+
+```bash
+# Test avec configuration factice
+uv run python test_email_with_config.py
+
+# Test avec vraie configuration
+uv run python test_email.py
+```
+
+📖 **Documentation complète** : Consultez `EMAIL_SETUP.md` pour plus de détails.
 
 ## 📝 Exemples d'Utilisation
 

@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Chatbot Demo//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:aeba91ce-ef1e-50b9-b4a1-8c6d6effd1dd@demo.local
+DTSTAMP:20250810T205050Z
+DTSTART:20250812T105050Z
+DTEND:20250812T113550Z
+SUMMARY:Visite appartement T3 - Test Chatbot
+LOCATION:123 Rue de la Paix, Paris
+DESCRIPTION:Visite d'un appartement T3 avec balcon, 2ème étage
+STATUS:CONFIRMED
+ATTENDEE;CN=Jean Dupont:mailto:jean.dupont@example.com
+END:VEVENT
+END:VCALENDAR

@@ -6,6 +6,7 @@ from typing import List, Dict, Optional
 from uuid import uuid5, NAMESPACE_DNS
 import os
 import re
+import asyncio
 from tools.check_availability import _mock_busy, _overlaps
 
 TZ = ZoneInfo("Europe/Rome")
@@ -121,8 +122,55 @@ def _write_ics_file(event_id: str, ics_content: str, folder: Optional[str] = Non
     # URL de fichier local pour la démo
     return f"file://{path}"
 
+
+async def _send_confirmation_email(event: Dict) -> bool:
+    """
+    Envoie un email de confirmation aux participants du rendez-vous
+    
+    Args:
+        event: Dictionnaire contenant les données de l'événement
+        
+    Returns:
+        bool: True si l'email a été envoyé avec succès
+    """
+    try:
+        # Import du service email
+        from src.core.email import email_service
+        
+        # Préparation des données pour l'email
+        appointment_data = {
+            "title": event["title"],
+            "start_iso": event["start_dt"].isoformat(),
+            "end_iso": event["end_dt"].isoformat(),
+            "location": event["location"],
+            "description": event["description"]
+        }
+        
+        # Envoi d'email à chaque participant
+        success_count = 0
+        for attendee in event["attendees"]:
+            if attendee.get("email"):
+                client_name = attendee.get("name", "Client")
+                success = await email_service.send_appointment_confirmation(
+                    client_email=attendee["email"],
+                    client_name=client_name,
+                    appointment_data=appointment_data,
+                    agent_name=f"Agent {event['agent_id']}"
+                )
+                if success:
+                    success_count += 1
+                    print(f"✅ Email de confirmation envoyé à {attendee['email']}")
+                else:
+                    print(f"❌ Échec de l'envoi d'email à {attendee['email']}")
+        
+        return success_count > 0
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi des emails de confirmation: {e}")
+        return False
+
 # --- API publique ---
-def create_event(
+async def create_event(
     agent_id: str,
     start: str | datetime,
     end: str | datetime,
@@ -131,6 +179,7 @@ def create_event(
     location: Optional[str] = None,
     description: Optional[str] = None,
     allow_conflict: bool = False,
+    send_email: bool = True,
 ) -> Dict:
     """
     Crée un événement (fake) si le créneau est libre.
@@ -186,19 +235,87 @@ def create_event(
     ics = _make_ics_content(event)
     ics_url = _write_ics_file(event_id, ics)
 
+    # Envoi d'email de confirmation si demandé et si des participants sont présents
+   
+   
+    email_sent = await _send_confirmation_email(event)
+
     return {
         "event_id": event_id,
         "ics_url": ics_url,
         "start_iso": start_dt.isoformat(),
         "end_iso": end_dt.isoformat(),
         "agent_id": agent_id,
+        "email_sent": email_sent,
     }
+
+
+def create_event_sync(
+    agent_id: str,
+    start: str | datetime,
+    end: str | datetime,
+    title: str,
+    attendees: Optional[List[Dict]] = None,
+    location: Optional[str] = None,
+    description: Optional[str] = None,
+    allow_conflict: bool = False,
+    send_email: bool = True,
+) -> Dict:
+    """
+    Version synchrone de create_event pour la compatibilité
+    """
+    try:
+        # Créer une nouvelle boucle d'événements si nécessaire
+        try:
+            loop = asyncio.get_running_loop()
+            # Si on est déjà dans une boucle, on utilise asyncio.create_task
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, create_event(
+                    agent_id=agent_id,
+                    start=start,
+                    end=end,
+                    title=title,
+                    attendees=attendees,
+                    location=location,
+                    description=description,
+                    allow_conflict=allow_conflict,
+                    send_email=send_email
+                ))
+                return future.result()
+        except RuntimeError:
+            # Pas de boucle en cours, on peut utiliser asyncio.run
+            return asyncio.run(create_event(
+                agent_id=agent_id,
+                start=start,
+                end=end,
+                title=title,
+                attendees=attendees,
+                location=location,
+                description=description,
+                allow_conflict=allow_conflict,
+                send_email=send_email
+            ))
+    except Exception as e:
+        print(f"Erreur lors de la création de l'événement: {e}")
+        # Fallback sans email en cas d'erreur
+        return asyncio.run(create_event(
+            agent_id=agent_id,
+            start=start,
+            end=end,
+            title=title,
+            attendees=attendees,
+            location=location,
+            description=description,
+            allow_conflict=allow_conflict,
+            send_email=False
+        ))
 
 # --- Exemple d'utilisation ---
 if __name__ == "__main__":
     # Cas nominal
     try:
-        res = create_event(
+        res = create_event_sync(
             agent_id="AGENT_42",
             start="2025-08-12T10:00:00+02:00",
             end="2025-08-12T10:45:00+02:00",
@@ -213,7 +330,7 @@ if __name__ == "__main__":
 
     # Tentative volontaire sur un créneau probablement occupé (déclenche une erreur réaliste)
     try:
-        res2 = create_event(
+        res2 = create_event_sync(
             agent_id="AGENT_42",
             start="2025-08-12T11:00:00+02:00",
             end="2025-08-12T11:45:00+02:00",

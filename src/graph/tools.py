@@ -6,10 +6,9 @@ from langchain_core.tools import tool as lc_tool
 
 from tools import (
     calculate_expression, 
-    fetch_url, 
     get_current_time, 
     check_availability as check_availability_tool, 
-    create_event as create_event_tool,
+    create_event_sync as create_event_tool,
     get_agent_info as get_agent_info_tool,
     list_agents as list_agents_tool,
     find_agent_by_speciality as find_agent_by_speciality_tool,
